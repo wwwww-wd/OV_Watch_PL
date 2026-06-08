@@ -1,0 +1,14 @@
+# 大文件 - 芯片手册（超过GitHub 100MB限制）
+Hardware/芯片手册/Cortex M3与M4权威指南.pdf
+
+# Keil MDK 编译产物
+Software/OV_Watch/MDK-ARM/DebugConfig/
+Software/OV_Watch/MDK-ARM/RTE/
+*.uvguix.*
+*.scvd
+*.lst
+*.o
+*.d
+*.crf
+*.axf
+*.dep
