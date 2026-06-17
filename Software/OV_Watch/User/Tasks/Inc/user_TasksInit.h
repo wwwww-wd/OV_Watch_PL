@@ -8,6 +8,12 @@ extern "C" {
 #include "FreeRTOS.h"
 #include "cmsis_os.h"
 
+extern osMessageQueueId_t Key_MessageQueue;
+extern osMessageQueueId_t Idle_MessageQueue;
+extern osMessageQueueId_t Stop_MessageQueue;
+extern osMessageQueueId_t IdleBreak_MessageQueue;
+extern osMessageQueueId_t HomeUpdata_MessageQueue;
+extern osMessageQueueId_t DataSave_MessageQueue;
 
 void User_Tasks_Init(void);
 void TaskTickHook(void);

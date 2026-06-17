@@ -1,4 +1,4 @@
---cpu=Cortex-M4.fp.sp
+--cpu=Cortex-M4.fp
 "ov_watch\startup_stm32f411xe.o"
 "ov_watch\main.o"
 "ov_watch\gpio.o"
@@ -17,7 +17,14 @@
 "ov_watch\delay.o"
 "ov_watch\user_tasksinit.o"
 "ov_watch\user_hardwareinittask.o"
+"ov_watch\user_keytask.o"
+"ov_watch\user_runmodetasks.o"
+"ov_watch\user_scrrenewtask.o"
+"ov_watch\user_sensupdatetask.o"
+"ov_watch\user_datasavetask.o"
 "ov_watch\ui.o"
+"ov_watch\ui_homepage.o"
+"ov_watch\ui_sensorpage.o"
 "ov_watch\croutine.o"
 "ov_watch\event_groups.o"
 "ov_watch\list.o"
@@ -220,7 +227,7 @@
 "ov_watch\spl06_001.o"
 "ov_watch\inv_mpu.o"
 "ov_watch\inv_mpu_dmp_motion_driver.o"
---strict --scatter "OV_Watch\OV_Watch.sct"
+--library_type=microlib --strict --scatter "OV_Watch\OV_Watch.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
 --list "OV_Watch.map" -o OV_Watch\OV_Watch.axf
