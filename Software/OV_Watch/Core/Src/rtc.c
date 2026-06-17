@@ -56,13 +56,19 @@ void MX_RTC_Init(void)
   }
 
   /* USER CODE BEGIN Check_RTC_BKUP */
-
+  #define RTC_MAGIC 0x5A5A
+  if (HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1) == RTC_MAGIC)
+  {
+    // 已有时间，跳过设置
+    return;
+  }
+  HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, RTC_MAGIC);
   /* USER CODE END Check_RTC_BKUP */
 
   /** Initialize RTC and set the Time and Date
   */
-  sTime.Hours = 0x11;
-  sTime.Minutes = 0x59;
+  sTime.Hours = 0x14;
+  sTime.Minutes = 0x04;
   sTime.Seconds = 0x59;
   sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sTime.StoreOperation = RTC_STOREOPERATION_RESET;
@@ -143,6 +149,45 @@ void HAL_RTC_MspDeInit(RTC_HandleTypeDef* rtcHandle)
 }
 
 /* USER CODE BEGIN 1 */
+uint8_t weekday_calculate(int y, int m, int d, int c)
+{
+	int w;
+	if (m == 1 || m == 2)
+	{y--, m += 12;}
+	w = y + y / 4 + c / 4 + 26 * (m + 1) / 10 + d - 1 - 2 * c;
+	while(w < 0)
+		w += 7;
+	w %= 7;
+	w = (w == 0) ? 7 : w;
+	return w;
+}
 
+void RTC_SetTime(uint8_t hours, uint8_t minutes, uint8_t seconds)
+{
+	RTC_TimeTypeDef time = {0};
+	time.Hours = hours;
+	time.Minutes = minutes;
+	time.Seconds = seconds;
+	if (HAL_RTC_SetTime(&hrtc, &time, RTC_FORMAT_BIN) != HAL_OK)
+	{
+		Error_Handler();
+	}
+}
+
+void RTC_SetDate(uint8_t year, uint8_t month, uint8_t date)
+{
+	RTC_DateTypeDef setdate = {0};
+	setdate.Date = date;
+	setdate.Month = month;
+	setdate.Year = year;
+
+	// Calculate the weekday
+	setdate.WeekDay = weekday_calculate(year, month, date, 20);
+
+	if (HAL_RTC_SetDate(&hrtc, &setdate, RTC_FORMAT_BIN) != HAL_OK)
+	{
+		Error_Handler();
+	}
+}
 /* USER CODE END 1 */
 

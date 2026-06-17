@@ -5,10 +5,10 @@
 extern "C" {
 #endif
 
-#include "PageManager.h"
+#include "FreeRTOS.h"
+#include "cmsis_os.h"
 
 void ScrRenewTask(void *argument);
-
 
 #ifdef __cplusplus
 }
