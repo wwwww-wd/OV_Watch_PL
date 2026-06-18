@@ -12,6 +12,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 lv_obj_t *ui_SensorPage = NULL;
+Page_t Page_Sensor = {ui_SensorPage_init, ui_SensorPage_deinit, &ui_SensorPage};
 static lv_timer_t *ui_SensorPageTimer = NULL;
 
 static lv_obj_t *temp_label = NULL;
@@ -84,15 +85,7 @@ static void swipe_right_cb(lv_event_t *e)
     lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_get_act());
     if(dir == LV_DIR_RIGHT)
     {
-      // 先停止定时器，避免回调访问已删除对象
-      if(ui_SensorPageTimer != NULL)
-      {
-        lv_timer_del(ui_SensorPageTimer);
-        ui_SensorPageTimer = NULL;
-      }
-      // 加载主页，auto_del=true 让 LVGL 自动删除 sensor page
-      lv_scr_load_anim(ui_HomePage, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 300, 0, true);
-      ui_SensorPage = NULL;  // 置空，避免野指针
+      Page_Back();
     }
   }
 }
@@ -161,11 +154,5 @@ void ui_SensorPage_deinit(void)
   {
     lv_timer_del(ui_SensorPageTimer);
     ui_SensorPageTimer = NULL;
-  }
-  
-  if(ui_SensorPage != NULL)
-  {
-    lv_obj_del(ui_SensorPage);
-    ui_SensorPage = NULL;
   }
 }

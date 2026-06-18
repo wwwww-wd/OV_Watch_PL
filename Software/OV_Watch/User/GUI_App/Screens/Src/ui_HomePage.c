@@ -11,6 +11,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 lv_obj_t *ui_HomePage = NULL;
+Page_t Page_Home = {ui_HomePage_init, ui_HomePage_deinit, &ui_HomePage};
 lv_obj_t *ui_TimeHourLabel = NULL;
 lv_obj_t *ui_TimeMinuteLabel = NULL;
 lv_obj_t *ui_DateLabel = NULL;
@@ -72,8 +73,8 @@ static void HomePage_timer_cb(lv_timer_t *timer)
   sprintf(buf, "%d", ui_StepsValue);
   lv_label_set_text(ui_StepsLabel, buf);
   
-  // Battery update (every 10 seconds = 20 * 500ms)
-  static uint8_t bat_cnt = 0;
+  // Battery update (every 10 seconds = 20 * 500ms, first read immediately)
+  static uint8_t bat_cnt = 19;
   if(++bat_cnt >= 20)
   {
     bat_cnt = 0;
@@ -100,12 +101,7 @@ static void swipe_left_cb(lv_event_t *e)
     lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_get_act());
     if(dir == LV_DIR_LEFT)
     {
-      // 如果 sensor page 不存在才创建
-      if(ui_SensorPage == NULL)
-      {
-        ui_SensorPage_init();
-      }
-      lv_scr_load_anim(ui_SensorPage, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
+      Page_Load(&Page_Sensor);
     }
   }
 }
@@ -190,11 +186,5 @@ void ui_HomePage_deinit(void)
   {
     lv_timer_del(ui_HomePageTimer);
     ui_HomePageTimer = NULL;
-  }
-  
-  if(ui_HomePage != NULL)
-  {
-    lv_obj_del(ui_HomePage);
-    ui_HomePage = NULL;
   }
 }

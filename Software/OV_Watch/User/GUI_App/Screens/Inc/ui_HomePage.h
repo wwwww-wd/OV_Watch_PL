@@ -6,8 +6,10 @@ extern "C" {
 #endif
 
 #include "lvgl.h"
+#include "PageManager.h"
 
 extern lv_obj_t *ui_HomePage;
+extern Page_t Page_Home;
 extern lv_obj_t *ui_TimeHourLabel;
 extern lv_obj_t *ui_TimeMinuteLabel;
 extern lv_obj_t *ui_DateLabel;

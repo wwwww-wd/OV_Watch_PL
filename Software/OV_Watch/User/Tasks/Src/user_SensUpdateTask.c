@@ -3,6 +3,9 @@
 #include "user_SensUpdateTask.h"
 #include "main.h"
 #include "HWDataAccess.h"
+#include "PageManager.h"
+#include "ui_HomePage.h"
+#include "task_wdog.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -38,8 +41,8 @@ void SensorTask(void *argument)
       }
     }
     
-    // Steps update
-    if(!HWInterface.IMU.ConnectionError)
+    // Steps update (only on home page to save power)
+    if(Page_Is_Home() && !HWInterface.IMU.ConnectionError)
     {
       HWInterface.IMU.Steps = HWInterface.IMU.GetSteps();
     }
@@ -55,6 +58,7 @@ void SensorTask(void *argument)
       osMessageQueuePut(DataSave_MessageQueue, &Datastr, 0, 1);
     }
     
+    WDOG_CheckIn(WDOG_CH_SENSOR);
     osDelay(500);
   }
 }

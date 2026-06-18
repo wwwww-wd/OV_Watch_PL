@@ -6,6 +6,8 @@
 #include "lcd.h"
 //gui
 #include "ui.h"
+#include "PageManager.h"
+#include "ui_ChargPage.h"
 //tasks
 #include "user_HardwareInitTask.h"
 #include "user_RunModeTasks.h"
@@ -13,6 +15,9 @@
 #include "user_KeyTask.h"
 #include "user_ScrRenewTask.h"
 #include "user_DataSaveTask.h"
+#include "user_ChargCheckTask.h"
+#include "task_wdog.h"
+#include "WDOG.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -64,7 +69,7 @@ const osThreadAttr_t KeyTask_attributes = {
 osThreadId_t ScrRenewTaskHandle;
 const osThreadAttr_t ScrRenewTask_attributes = {
   .name = "ScrRenewTask",
-  .stack_size = 128 * 10,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityLow1,
 };
 
@@ -84,6 +89,22 @@ const osThreadAttr_t DataSaveTask_attributes = {
   .priority = (osPriority_t) osPriorityLow2,
 };
 
+//Watchdog feed task
+osThreadId_t WDOGFeedTaskHandle;
+const osThreadAttr_t WDOGFeedTask_attributes = {
+  .name = "WDOGFeedTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
+//Charge check task
+osThreadId_t ChargCheckTaskHandle;
+const osThreadAttr_t ChargCheckTask_attributes = {
+  .name = "ChargCheckTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow2,
+};
+
 
 /* Message queues ------------------------------------------------------------*/
 osMessageQueueId_t Key_MessageQueue;
@@ -92,6 +113,7 @@ osMessageQueueId_t Stop_MessageQueue;
 osMessageQueueId_t IdleBreak_MessageQueue;
 osMessageQueueId_t HomeUpdata_MessageQueue;
 osMessageQueueId_t DataSave_MessageQueue;
+osMessageQueueId_t PageCmd_MessageQueue;
 
 
 /* Private function prototypes -----------------------------------------------*/
@@ -119,6 +141,7 @@ void User_Tasks_Init(void)
 	IdleBreak_MessageQueue = osMessageQueueNew(1, 1, NULL);
 	HomeUpdata_MessageQueue = osMessageQueueNew(1, 1, NULL);
 	DataSave_MessageQueue = osMessageQueueNew(2, 1, NULL);
+	PageCmd_MessageQueue = osMessageQueueNew(2, 1, NULL);
 
 	/* add threads, ... */
   HardwareInitTaskHandle = osThreadNew(HardwareInitTask, NULL, &HardwareInitTask_attributes);
@@ -128,12 +151,17 @@ void User_Tasks_Init(void)
 	ScrRenewTaskHandle = osThreadNew(ScrRenewTask, NULL, &ScrRenewTask_attributes);
 	SensorTaskHandle = osThreadNew(SensorTask, NULL, &SensorTask_attributes);
 	DataSaveTaskHandle = osThreadNew(DataSaveTask, NULL, &DataSaveTask_attributes);
+	WDOGFeedTaskHandle = osThreadNew(WDOGFeedTask, NULL, &WDOGFeedTask_attributes);
+	ChargCheckTaskHandle = osThreadNew(ChargCheckTask, NULL, &ChargCheckTask_attributes);
 
   /* add events, ... */
 
 	/* add others ... */
 	uint8_t HomeUpdataStr;
 	osMessageQueuePut(HomeUpdata_MessageQueue, &HomeUpdataStr, 0, 1);
+
+	/* enable watchdog after all tasks are created */
+	// WDOG_Enable();  // 由 WDOGFeedTask 在首次签到后启用
 }
 
 
@@ -153,12 +181,23 @@ void User_Tasks_Init(void)
 static void LvHandlerTask(void *argument)
 {
   uint8_t IdleBreakstr = 0;
+  uint8_t pageCmd = 0;
   while(1)
   {
     if(lv_disp_get_inactive_time(NULL) < 1000)
     {
       osMessageQueuePut(IdleBreak_MessageQueue, &IdleBreakstr, 0, 0);
     }
+    if(osMessageQueueGet(PageCmd_MessageQueue, &pageCmd, NULL, 0) == osOK)
+    {
+      if(pageCmd == 1)
+        Page_Back();
+      else if(pageCmd == 2)
+        Page_Back_Home();
+      else if(pageCmd == 3)
+        Page_Load(&Page_Charg);
+    }
+    WDOG_CheckIn(WDOG_CH_LVGL);
     lv_task_handler();
     osDelay(1);
   }

@@ -14,6 +14,7 @@ extern osMessageQueueId_t Stop_MessageQueue;
 extern osMessageQueueId_t IdleBreak_MessageQueue;
 extern osMessageQueueId_t HomeUpdata_MessageQueue;
 extern osMessageQueueId_t DataSave_MessageQueue;
+extern osMessageQueueId_t PageCmd_MessageQueue;
 
 void User_Tasks_Init(void);
 void TaskTickHook(void);

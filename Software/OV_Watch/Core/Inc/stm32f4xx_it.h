@@ -58,7 +58,14 @@ void USART1_IRQHandler(void);
 void DMA2_Stream2_IRQHandler(void);
 void DMA2_Stream5_IRQHandler(void);
 void DMA2_Stream7_IRQHandler(void);
+void EXTI2_IRQHandler(void);
+void EXTI4_IRQHandler(void);
+void EXTI9_5_IRQHandler(void);
 /* USER CODE BEGIN EFP */
+
+extern uint8_t HardInt_Charg_flag;
+extern uint8_t HardInt_receive_str[25];
+extern uint8_t HardInt_uart_flag;
 
 /* USER CODE END EFP */
 

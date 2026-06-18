@@ -1,5 +1,6 @@
 /* Private includes -----------------------------------------------------------*/
 #include "user_TasksInit.h"
+#include "task_wdog.h"
 #include "main.h"
 #include "key.h"
 
@@ -37,6 +38,7 @@ void KeyTask(void *argument)
 				osMessageQueuePut(IdleBreak_MessageQueue, &IdleBreakstr, 0, 1);
 				break;
 		}
+		WDOG_CheckIn(WDOG_CH_KEY);
 		osDelay(1);
 	}
 }

@@ -23,6 +23,7 @@
 #include "DataSave.h"
 #include "AHT21.h"
 #include "SPL06_001.h"
+#include "WDOG.h"
 
 // ui
 #include "lvgl.h"
