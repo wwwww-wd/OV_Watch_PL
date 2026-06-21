@@ -13,6 +13,7 @@
 #include "PageManager.h"
 #include "task_wdog.h"
 #include "stm32f4xx_it.h"
+#include "MPU6050.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -56,40 +57,20 @@ void PowerMgrTask(void *argument)
     // Stop mode entry
     if(osMessageQueueGet(Stop_MessageQueue, &Stopstr, NULL, 0) == osOK)
     {
-      IdleTimerCount = 0;
-
-      // 如果不在首页，先回到首页（销毁传感器页面的定时器）
-      if(!Page_Is_Home())
-      {
-        uint8_t pageCmd = 2;
-        osMessageQueuePut(PageCmd_MessageQueue, &pageCmd, 0, 0);
-        osDelay(50); // 等待 LvHandlerTask 处理页面切换
-      }
+      uint8_t Wrist_Flag = 0;
 
       /*************************** 进入休眠前操作 ***************************/
-      // 关 LED
-      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);
-      // 关 RTC 唤醒定时器（防止周期性误唤醒）
-      HAL_RTCEx_DeactivateWakeUpTimer(&hrtc);
-      // 关 LCD 背光 + 复位 LCD
-      LCD_Close_Light();
+      sleep:
+      IdleTimerCount = 0;
+
       LCD_RES_Clr();
+      LCD_Close_Light();
       CST816_Sleep();
 
-      // 清除 EXTI 挂起标志
-      __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_2);
-      __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_4);
-      __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_5);
-      NVIC_ClearPendingIRQ(EXTI2_IRQn);
-      NVIC_ClearPendingIRQ(EXTI4_IRQn);
-      NVIC_ClearPendingIRQ(EXTI9_5_IRQn);
-
-      /******************************************************************/
-
+    
       /****************************** 进入 Stop 模式 *****************************/
-      sleep:
-      WDOG_Disnable();
       vTaskSuspendAll();
+      WDOG_Disnable();
       CLEAR_BIT(SysTick->CTRL, SysTick_CTRL_TICKINT_Msk);
       HAL_PWR_EnterSTOPMode(PWR_MAINREGULATOR_ON, PWR_STOPENTRY_WFI);
 
@@ -99,36 +80,40 @@ void PowerMgrTask(void *argument)
       SET_BIT(SysTick->CTRL, SysTick_CTRL_TICKINT_Msk);
       HAL_SYSTICK_Config(SystemCoreClock / (1000U / uwTickFreq));
       SystemClock_Config();
+      WDOG_Feed();
       xTaskResumeAll();
 
-      /******************************************************************/
-
       /****************************** 唤醒判断 *****************************/
-      // 延时去抖，等引脚稳定
-      HAL_Delay(20);
-
-      // 检查实际引脚状态
-      if(!KEY1 || KEY2 || ChargeCheck())
+      // MPU 抬腕检测
+      if(HWInterface.IMU.wrist_is_enabled)
       {
-        // 真正唤醒：KEY 按下或充电状态变化，继续恢复
+        uint8_t hor = MPU_isHorizontal();
+        if(hor && HWInterface.IMU.wrist_state == WRIST_DOWN)
+        {
+          HWInterface.IMU.wrist_state = WRIST_UP;
+          Wrist_Flag = 1;
+        }
+        else if(!hor && HWInterface.IMU.wrist_state == WRIST_UP)
+        {
+          HWInterface.IMU.wrist_state = WRIST_DOWN;
+          IdleTimerCount = 0;
+          goto sleep;
+        }
+      }
+        
+      // 判断是否真正唤醒
+      if(!KEY1 || KEY2 || ChargeCheck() || Wrist_Flag)
+      {
+        Wrist_Flag = 0;
+        // 继续恢复
       }
       else
       {
-        // 误唤醒：清除标志，回到休眠
-        __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_2);
-        __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_4);
-        __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_5);
-        NVIC_ClearPendingIRQ(EXTI2_IRQn);
-        NVIC_ClearPendingIRQ(EXTI4_IRQn);
-        NVIC_ClearPendingIRQ(EXTI9_5_IRQn);
         IdleTimerCount = 0;
         goto sleep;
       }
 
       /****************************** 恢复外设 *****************************/
-      // 恢复 RTC 唤醒定时器
-      HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 2000, RTC_WAKEUPCLOCK_RTCCLK_DIV16);
-
       LCD_Init();
       LCD_Set_Light(90);
       CST816_Wakeup();
@@ -144,7 +129,6 @@ void PowerMgrTask(void *argument)
 
       // 刷新主页数据
       osMessageQueuePut(HomeUpdata_MessageQueue, &HomeUpdataStr, 0, 1);
-      /******************************************************************/
     }
 
     WDOG_CheckIn(WDOG_CH_POWER);
@@ -161,14 +145,12 @@ void IdleTimerCallback(void *argument)
 {
   IdleTimerCount += 1;
 
-  // Light off after 5 seconds (50 * 100ms)
   if(IdleTimerCount == 50)
   {
     uint8_t Idlestr = 0;
     osMessageQueuePut(Idle_MessageQueue, &Idlestr, 0, 1);
   }
 
-  // Stop mode after 10 seconds (100 * 100ms)
   if(IdleTimerCount == 100)
   {
     uint8_t Stopstr = 1;
