@@ -17,6 +17,7 @@ EEPROM Data description:
 [0x00]:0x55 for check
 [0x01]:0xAA for check
 
+[0x10]:wrist_is_enabled
 [0x20]:Last Save Day(0-31)
 [0x21]:Day Steps High
 [0x22]:Day Steps Low
@@ -38,6 +39,11 @@ void DataSaveTask(void *argument)
     uint8_t Datastr = 0;
     if(osMessageQueueGet(DataSave_MessageQueue, &Datastr, NULL, 1) == osOK)
     {
+      // Save wrist_is_enabled setting
+      uint8_t wrist_dat[1];
+      wrist_dat[0] = HWInterface.IMU.wrist_is_enabled;
+      SettingSave(wrist_dat, 0x10, 1);
+
       uint8_t dat[3];
 
       RTC_DateTypeDef nowdate;

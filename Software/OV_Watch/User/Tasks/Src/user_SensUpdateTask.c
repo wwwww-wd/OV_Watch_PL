@@ -4,8 +4,8 @@
 #include "main.h"
 #include "HWDataAccess.h"
 #include "PageManager.h"
-#include "ui_HomePage.h"
 #include "task_wdog.h"
+#include "MPU6050.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -33,7 +33,6 @@ void SensorTask(void *argument)
     uint8_t HomeUpdataStr;
     if(osMessageQueueGet(HomeUpdata_MessageQueue, &HomeUpdataStr, NULL, 0) == osOK)
     {
-      // Battery
       HWInterface.Power.power_remain = HWInterface.Power.BatCalculate();
       if(HWInterface.Power.power_remain > 100)
       {
@@ -45,6 +44,30 @@ void SensorTask(void *argument)
     if(Page_Is_Home() && !HWInterface.IMU.ConnectionError)
     {
       HWInterface.IMU.Steps = HWInterface.IMU.GetSteps();
+    }
+    
+    // MPU 抬腕检测
+    // MPU 抬腕/放手状态检测
+    if(HWInterface.IMU.wrist_is_enabled && !HWInterface.IMU.ConnectionError)
+    {
+      if(MPU_isHorizontal())
+      {
+        HWInterface.IMU.wrist_state = WRIST_UP;
+      }
+      else
+      {
+        if(WRIST_UP == HWInterface.IMU.wrist_state)
+        {
+          HWInterface.IMU.wrist_state = WRIST_DOWN;
+          // 放手时在主页，进入Stop模式（暂时注释，调试抬腕唤醒用）
+          // if(Page_Is_Home())
+          // {
+          //   uint8_t Stopstr;
+          //   osMessageQueuePut(Stop_MessageQueue, &Stopstr, 0, 1);
+          // }
+        }
+        HWInterface.IMU.wrist_state = WRIST_DOWN;
+      }
     }
     
     // 每60秒或步数变化超过10步时保存

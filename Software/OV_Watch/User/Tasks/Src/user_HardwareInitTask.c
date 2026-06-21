@@ -63,8 +63,8 @@ void HardwareInitTask(void *argument)
 	{
     vTaskSuspendAll();
 
-    LED_Port_Init();
-
+     LED_Port_Init();
+     
     // RTC Wake timer
     if(HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 2000, RTC_WAKEUPCLOCK_RTCCLK_DIV16) != HAL_OK)
     {
@@ -95,10 +95,23 @@ void HardwareInitTask(void *argument)
       HWInterface.IMU.ConnectionError = HWInterface.IMU.Init();
     }
 
-    // EEPROM - 读取步数
+    // EEPROM - 读取设置和步数
     EEPROM_Init();
     if(!EEPROM_Check())
     {
+      // 读取 wrist_is_enabled 设置
+      uint8_t wrist_setting[1];
+      SettingGet(wrist_setting, 0x10, 1);
+      if(wrist_setting[0] == 1)
+      {
+        HWInterface.IMU.wrist_is_enabled = 1;
+      }
+      else
+      {
+        HWInterface.IMU.wrist_is_enabled = 0;
+      }
+
+      // 读取步数
       uint8_t recbuf[3];
       SettingGet(recbuf, 0x20, 3);
 
