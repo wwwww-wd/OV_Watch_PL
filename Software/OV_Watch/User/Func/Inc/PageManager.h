@@ -2,6 +2,7 @@
 #define PAGE_MANAGER_H
 
 #include "lvgl.h"
+#include "ui_helpers.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -67,11 +68,15 @@ bool        Page_Is_Home(void);
  *  @brief  加载新页面（push）
  *  @note   deinit 当前页面，push 新页面，init 并加载动画
  *  @param  new_page    新页面描述符指针
+ *  @param  fademode    淡入淡出动画模式
+ *  @param  spd           动画速度
+ *  @param  delay         延迟时间
+ *  @param  target_init   目标页面初始化函数
  *  @retval  0  成功
  *  @retval -1  参数错误
  *  @retval -2  栈满
  */
-int8_t      Page_Load(Page_t *new_page);
+int8_t      Page_Load(Page_t *new_page, lv_scr_load_anim_t fademode, int spd, int delay);
 
 /**
  *  @brief  返回上一页（pop）
@@ -79,7 +84,7 @@ int8_t      Page_Load(Page_t *new_page);
  *  @retval  0  成功
  *  @retval -1  已在栈底，无法继续返回
  */
-int8_t      Page_Back(void);
+int8_t      Page_Back(lv_scr_load_anim_t fademode, int spd, int delay);
 
 /**
  *  @brief  一键返回首页（pop 到只剩首页）

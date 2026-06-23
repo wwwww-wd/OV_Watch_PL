@@ -1,9 +1,7 @@
 /* Private includes -----------------------------------------------------------*/
 #include "../Inc/ui_SensorPage.h"
-#include "../Inc/ui_HomePage.h"
+#include "../Inc/ui_Home_Page.h"
 #include "HWDataAccess.h"
-#include "AHT21.h"
-#include "SPL06_001.h"
 #include <stdio.h>
 
 /* Private typedef -----------------------------------------------------------*/
@@ -73,19 +71,19 @@ static void SensorPage_timer_cb(lv_timer_t *timer)
 }
 
 /**
-  * @brief  Swipe right event callback (back to home)
+  * @brief  Swipe Top event callback (back to home)
   * @param  e: event
   * @retval None
   */
-static void swipe_right_cb(lv_event_t *e)
+static void swipe_Top_cb(lv_event_t *e)
 {
   lv_event_code_t code = lv_event_get_code(e);
   if(code == LV_EVENT_GESTURE)
   {
     lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_get_act());
-    if(dir == LV_DIR_RIGHT)
+    if(dir == LV_DIR_BOTTOM)
     {
-      Page_Back();
+      Page_Back(LV_SCR_LOAD_ANIM_MOVE_BOTTOM, 250, 0);
     }
   }
 }
@@ -101,7 +99,7 @@ void ui_SensorPage_init(void)
   lv_obj_set_style_bg_color(ui_SensorPage, lv_color_hex(0x000000), 0);
   
   // Add gesture event
-  lv_obj_add_event_cb(ui_SensorPage, swipe_right_cb, LV_EVENT_GESTURE, NULL);
+  lv_obj_add_event_cb(ui_SensorPage, swipe_Top_cb, LV_EVENT_GESTURE, NULL);
   
   // Title
   lv_obj_t *title = lv_label_create(ui_SensorPage);
@@ -150,9 +148,16 @@ void ui_SensorPage_init(void)
   */
 void ui_SensorPage_deinit(void)
 {
+  //NULL screen variables
+  temp_label = NULL;
+  humi_label = NULL;
+  pressure_label = NULL;
+  altitude_label = NULL;
+
   if(ui_SensorPageTimer != NULL)
   {
     lv_timer_del(ui_SensorPageTimer);
     ui_SensorPageTimer = NULL;
   }
+
 }

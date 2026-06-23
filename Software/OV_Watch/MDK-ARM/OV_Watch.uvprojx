@@ -10,14 +10,14 @@
       <TargetName>OV_Watch</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
-      <pCCUsed>5060750::V5.06 update 6 (build 750)::ARMCC</pCCUsed>
+      <pCCUsed>5060960::V5.06 update 7 (build 960)::.\ARMCC</pCCUsed>
       <uAC6>0</uAC6>
       <TargetOption>
         <TargetCommonOption>
           <Device>STM32F411CEUx</Device>
           <Vendor>STMicroelectronics</Vendor>
-          <PackID>Keil.STM32F4xx_DFP.2.15.0</PackID>
-          <PackURL>http://www.keil.com/pack/</PackURL>
+          <PackID>Keil.STM32F4xx_DFP.2.7.0</PackID>
+          <PackURL>http://www.keil.com/pack</PackURL>
           <Cpu>IRAM(0x20000000-0x2001FFFF) IROM(0x8000000-0x807FFFF) CLOCK(25000000) FPU2 CPUTYPE("Cortex-M4") TZ</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
           <StartupFile></StartupFile>
@@ -52,7 +52,7 @@
           <OutputName>OV_Watch</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
-          <CreateHexFile>1</CreateHexFile>
+          <CreateHexFile>0</CreateHexFile>
           <DebugInformation>1</DebugInformation>
           <BrowseInformation>1</BrowseInformation>
           <ListingPath></ListingPath>
@@ -186,7 +186,6 @@
             <RvdsVP>2</RvdsVP>
             <RvdsMve>0</RvdsMve>
             <RvdsCdeCp>0</RvdsCdeCp>
-            <nBranchProt>0</nBranchProt>
             <hadIRAM2>0</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
@@ -340,7 +339,7 @@
               <MiscControls>--diag_suppress=68 --diag_suppress=111  --diag_suppress=188 --diag_suppress=223 --diag_suppress=546 --diag_suppress=1295</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F411xE</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;..\User;..\User\Func\Inc;..\User\Tasks\Inc;..\Drivers\BSP\AHT21;..\Drivers\BSP\BL24C02;..\Drivers\BSP\EM7028;..\Drivers\BSP\IIC;..\Drivers\BSP\KEY;..\Drivers\BSP\KT6328;..\Drivers\BSP\LCD;..\Drivers\BSP\LSM303DLH;..\Drivers\BSP\MPU6050;..\Drivers\BSP\MPU6050\eMPL;..\Drivers\BSP\OWDG;..\Drivers\BSP\POWER;..\Drivers\BSP\POWER;..\Drivers\BSP\SPL06_001;..\Drivers\BSP\TOUCH;..\Drivers\SYSTEM;..\Middlewares\LVGL\GUI;..\Middlewares\LVGL\GUI\lvgl;..\Middlewares\LVGL\GUI\lvgl\src;..\Middlewares\LVGL\GUI\lvgl\porting;..\User\GUI_App;..\User\GUI_App\Screens\Inc</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;..\User;..\User\Func\Inc;..\User\Tasks\Inc;..\Drivers\BSP\AHT21;..\Drivers\BSP\BL24C02;..\Drivers\BSP\EM7028;..\Drivers\BSP\IIC;..\Drivers\BSP\KEY;..\Drivers\BSP\KT6328;..\Drivers\BSP\LCD;..\Drivers\BSP\LSM303DLH;..\Drivers\BSP\MPU6050;..\Drivers\BSP\MPU6050\eMPL;..\Drivers\BSP\OWDG;..\Drivers\BSP\POWER;..\Drivers\BSP\POWER;..\Drivers\BSP\SPL06_001;..\Drivers\BSP\TOUCH;..\Drivers\SYSTEM;..\Middlewares\LVGL\GUI;..\Middlewares\LVGL\GUI\lvgl;..\Middlewares\LVGL\GUI\lvgl\src;..\Middlewares\LVGL\GUI\lvgl\porting;..\User\GUI_App;..\User\GUI_App\Screens\Inc;..\User\GUI_App\components</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -545,19 +544,184 @@
               <FilePath>..\User\GUI_App\ui.c</FilePath>
             </File>
             <File>
-              <FileName>ui_HomePage.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\GUI_App\Screens\Src\ui_HomePage.c</FilePath>
-            </File>
-            <File>
               <FileName>ui_SensorPage.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\User\GUI_App\Screens\Src\ui_SensorPage.c</FilePath>
             </File>
             <File>
-              <FileName>ui_ChargPage.c</FileName>
+              <FileName>ui_helpers.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\User\GUI_App\Screens\Src\ui_ChargPage.c</FilePath>
+              <FilePath>..\User\GUI_App\ui_helpers.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_Home_Page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_Home_Page.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_Application_Page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_Application_Page.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_Application1_Page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_Application1_Page.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_App_CalcPage.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_App_CalcPage.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_App_Calendat_Page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_App_Calendat_Page.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_App_CompassPage.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_App_CompassPage.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_App_HRPage.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_App_HRPage.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_Brightness_Page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_Brightness_Page.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_Charging_Page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_Charging_Page.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_Menu_Page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_Menu_Page.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_Setting_Page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_Setting_Page.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_Setting_Dis_Bri_Page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_Setting_Dis_Bri_Page.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_Time_Count_Page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_Time_Count_Page.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_Setting__SystemUpdates_Page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_Setting__SystemUpdates_Page.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_Setting__SystemUpdates_Poweroff_Page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_Setting__SystemUpdates_Poweroff_Page.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_Setting_About_Page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_Setting_About_Page.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_Setting_Barttery_Saver_Page.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\Screens\Src\ui_Setting_Barttery_Saver_Page.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Application/User/GUI_APP/image</GroupName>
+          <Files>
+            <File>
+              <FileName>ui_img_1630624692.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\images\ui_img_1630624692.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_img_1732147085.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\images\ui_img_1732147085.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_img_1887403499.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\images\ui_img_1887403499.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_img_754277884.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\images\ui_img_754277884.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_img_1177623285.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\images\ui_img_1177623285.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_img_1402427003.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\images\ui_img_1402427003.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_img_2092788291.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\images\ui_img_2092788291.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_img_783175834.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\images\ui_img_783175834.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_img_307400400.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\images\ui_img_307400400.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_img_919959168.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\images\ui_img_919959168.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_img_1194381817.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\images\ui_img_1194381817.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Application/User/GUI_APP/components</GroupName>
+          <Files>
+            <File>
+              <FileName>ui_comp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\components\ui_comp.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_comp_app.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\components\ui_comp_app.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_comp_hook.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\components\ui_comp_hook.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_comp_settingcard.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\GUI_App\components\ui_comp_settingcard.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1655,5 +1819,14 @@
     </components>
     <files/>
   </RTE>
+
+  <LayerInfo>
+    <Layers>
+      <Layer>
+        <LayName>OV_Watch</LayName>
+        <LayPrjMark>1</LayPrjMark>
+      </Layer>
+    </Layers>
+  </LayerInfo>
 
 </Project>

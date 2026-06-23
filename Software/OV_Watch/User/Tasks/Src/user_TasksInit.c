@@ -7,7 +7,7 @@
 //gui
 #include "ui.h"
 #include "PageManager.h"
-#include "ui_ChargPage.h"
+#include "ui_Charging_Page.h"
 //tasks
 #include "user_HardwareInitTask.h"
 #include "user_RunModeTasks.h"
@@ -45,7 +45,7 @@ const osThreadAttr_t HardwareInitTask_attributes = {
 osThreadId_t LvHandlerTaskHandle;
 const osThreadAttr_t LvHandlerTask_attributes = {
   .name = "LvHandlerTask",
-  .stack_size = 128 * 24,
+  .stack_size = 128 * 64,
   .priority = (osPriority_t) osPriorityLow,
 };
 
@@ -151,7 +151,7 @@ void User_Tasks_Init(void)
 	ScrRenewTaskHandle = osThreadNew(ScrRenewTask, NULL, &ScrRenewTask_attributes);
 	SensorTaskHandle = osThreadNew(SensorTask, NULL, &SensorTask_attributes);
 	DataSaveTaskHandle = osThreadNew(DataSaveTask, NULL, &DataSaveTask_attributes);
-	WDOGFeedTaskHandle = osThreadNew(WDOGFeedTask, NULL, &WDOGFeedTask_attributes);
+	//WDOGFeedTaskHandle = osThreadNew(WDOGFeedTask, NULL, &WDOGFeedTask_attributes);
 	ChargCheckTaskHandle = osThreadNew(ChargCheckTask, NULL, &ChargCheckTask_attributes);
 
   /* add events, ... */
@@ -191,11 +191,11 @@ static void LvHandlerTask(void *argument)
     if(osMessageQueueGet(PageCmd_MessageQueue, &pageCmd, NULL, 0) == osOK)
     {
       if(pageCmd == 1)
-        Page_Back();
+        Page_Back(LV_SCR_LOAD_ANIM_NONE, 0, 0);
       else if(pageCmd == 2)
         Page_Back_Home();
       else if(pageCmd == 3)
-        Page_Load(&Page_Charg);
+        Page_Load(&Page_Charging,LV_SCR_LOAD_ANIM_NONE, 100, 0);
     }
     WDOG_CheckIn(WDOG_CH_LVGL);
     lv_task_handler();
