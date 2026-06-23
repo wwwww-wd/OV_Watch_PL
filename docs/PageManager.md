@@ -19,9 +19,10 @@ typedef struct {
 ```
 
 示例：
+
 ```c
-lv_obj_t *ui_HomePage = NULL;
-Page_t Page_Home = {ui_HomePage_init, ui_HomePage_deinit, &ui_HomePage};
+lv_obj_t *ui_Home_Page = NULL;
+Page_t Page_Home = {ui_Home_Page_screen_init, ui_Home_Page_deinit, &ui_Home_Page};
 ```
 
 ### PageStack_t — 页面栈
@@ -37,6 +38,7 @@ typedef struct {
 ```
 
 栈状态示例：
+
 ```
 pages[0] → Page_Home    ← 栈底，不可弹出
 pages[1] → Page_Menu
@@ -70,9 +72,9 @@ HardwareInitTask:
 
 `PageManager_Init` 在调度器启动前调用，此时不能创建 mutex。mutex 采用懒初始化——第一次调用 `Page_Load`/`Page_Back` 时才创建。
 
-### 2.2 页面切换流程
+### 2.2 页面切换流程（动画 + 延迟删除）
 
-以 `Page_Load(&Page_Sensor)` 为例：
+以 `Page_Load(&Page_Sensor, LV_SCR_LOAD_ANIM_MOVE_LEFT, 250, 0, &ui_SensorPage_init)` 为例：
 
 ```
 ① switching == true（防重入）
@@ -80,27 +82,32 @@ HardwareInitTask:
 ③ osMutexAcquire（加锁）
 ④ current = stack_peek()           // 获取当前页面 Page_Home
 ⑤ stack_push(&Page_Sensor)         // pages[1] = &Page_Sensor, top=2
-⑥ switch_to(Page_Home, Page_Sensor)
+⑥ switch_to(Page_Home, Page_Sensor, LV_SCR_LOAD_ANIM_MOVE_LEFT, 250, 0, ...)
    → Page_Home 是 home_page，跳过 deinit（首页不销毁）
    → Page_Sensor.init()            // 创建传感器页面控件 + 定时器
-   → lv_scr_load(ui_SensorPage)    // 显示传感器页面
+   → lv_scr_load_anim(ui_SensorPage, MOVE_LEFT, 250, 0, false)  // 启动动画
+   → 创建一次性 lv_timer，300ms 后执行 delayed_delete_cb
+     → 动画结束后删除旧屏幕对象（仅对非首页）
 ⑦ osMutexRelease（解锁）
 ⑧ switching = false
 ```
 
+**关键变化**：旧屏幕对象在动画结束后才删除，而非立即删除。动画期间旧屏幕仍被动画引擎引用，提前删除会导致 Use-after-free → HardFault。
+
 ### 2.3 返回流程
 
-以 `Page_Back()` 为例：
+以 `Page_Back(LV_SCR_LOAD_ANIM_MOVE_RIGHT, 250, 0, &ui_Home_Page_screen_init)` 为例：
 
 ```
 ① switching == true
 ② osMutexAcquire
 ③ current = stack_pop()            // 弹出 Page_Sensor
 ④ previous = stack_peek()          // 获取 Page_Home
-⑤ switch_to(Page_Sensor, Page_Home)
-   → Page_Sensor 不是 home_page，调用 deinit（删定时器）
+⑤ switch_to(Page_Sensor, Page_Home, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 250, 0, ...)
+   → Page_Sensor 不是 home_page，调用 deinit（删定时器 + 指针置 NULL）
    → Page_Home 是 home_page，跳过 init（控件已存在）
-   → lv_scr_load(ui_HomePage)      // 直接显示首页
+   → lv_scr_load_anim(ui_HomePage, MOVE_RIGHT, 250, 0, false)  // 启动动画
+   → 创建一次性 lv_timer，300ms 后删除 SensorPage 屏幕对象
 ⑥ osMutexRelease
 ⑦ switching = false
 ```
@@ -111,16 +118,16 @@ HardwareInitTask:
 
 ### 3.1 为什么 deinit 只删定时器不删控件？
 
-`lv_scr_load(new_screen)` 内部会自动删除旧屏幕的所有控件。如果 `deinit` 也删控件，就会双重删除 → 访问已释放内存 → HardFault。
+`lv_scr_load_anim` 执行动画期间（`spd + delay` 毫秒），**动画引擎会持续引用旧屏幕对象**来计算过渡动画的位置、透明度等。如果 `deinit` 调用 `lv_obj_del()` 立即释放旧屏幕，动画引擎就会访问已释放内存，破坏整个内存池，导致后续任何内存操作触发 HardFault。
 
 ```
 ❌ 错误做法：
-  deinit → lv_obj_del(控件)     ← 第一次删除
-  lv_scr_load → 再删一次旧屏幕  ← 第二次删除（崩溃！）
+  deinit → lv_obj_del(旧屏幕)           ← 动画还在引用 → 内存池损坏
+  t=100ms 动画结束 → 遍历损坏的链表 → HardFault
 
 ✅ 正确做法：
-  deinit → 只删定时器            ← 清理非 LVGL 资源
-  lv_scr_load → 自动删除旧屏幕  ← 控件只删一次
+  deinit → 只删定时器，screen 指针置 NULL  ← 清理非 LVGL 资源
+  t=300ms 延迟删除回调 → lv_obj_del(旧屏幕)  ← 动画结束后安全删除
 ```
 
 ### 3.2 定时器为什么必须在 lv_scr_load 之前删？
@@ -145,24 +152,34 @@ HardwareInitTask:
 首页（`home_page`）跳过 `deinit` 和 `init`：
 
 ```c
-static void switch_to(Page_t *old_page, Page_t *new_page)
+static void switch_to(Page_t *old_page, Page_t *new_page, lv_scr_load_anim_t fademode,
+                      int spd, int delay, void (*target_init)(void))
 {
     if (old_page != NULL && old_page != stack.home_page)
-        old_page->deinit();        // 非首页：删定时器
+        old_page->deinit();        // 非首页：删定时器 + 指针置 NULL
     if (new_page != stack.home_page)
         new_page->init();          // 非首页：创建控件 + 定时器
-    lv_scr_load(*new_page->page_obj);
+
+    lv_obj_t *old_scr = (old_page != NULL && old_page != stack.home_page)
+                        ? *old_page->page_obj : NULL;
+    lv_scr_load_anim(*new_page->page_obj, fademode, spd, delay, false);
+
+    if (old_scr != NULL) {         // 延迟删除旧屏幕（动画结束后）
+        lv_timer_t *del_timer = lv_timer_create(
+            delayed_delete_cb, spd + delay + 50, old_page->page_obj);
+        lv_timer_set_repeat_count(del_timer, 1);
+    }
 }
 ```
 
 原因：首页是手表表盘，需要持续显示时间、步数、电量。如果每次返回都重建控件，会短暂显示默认值（12:00、0 步）。常驻首页避免此问题。
 
-| 操作 | 首页 | 其他页面 |
-|------|------|---------|
-| deinit | 跳过 | 调用（删定时器） |
-| init | 跳过 | 调用（创建控件） |
-| pop | 不可弹出 | 可弹出 |
-| 控件生命周期 | 常驻内存 | 每次进出重建 |
+| 操作         | 首页     | 其他页面                      |
+| ------------ | -------- | ----------------------------- |
+| deinit       | 跳过     | 调用（删定时器 + 指针置 NULL） |
+| init         | 跳过     | 调用（创建控件）               |
+| pop          | 不可弹出 | 可弹出                        |
+| 控件生命周期 | 常驻内存 | 动画结束后延迟删除             |
 
 ---
 
@@ -207,12 +224,12 @@ Page_Load 入口 ────┤
 
 返回值说明：
 
-| 返回值 | 含义 |
-|--------|------|
-| 0 | 成功 |
-| -1 | 参数错误 / 已在栈底 |
-| -2 | 栈满 / 栈空 |
-| -3 | 正在切换中（被 switching 拒绝） |
+| 返回值 | 含义                            |
+| ------ | ------------------------------- |
+| 0      | 成功                            |
+| -1     | 参数错误 / 已在栈底             |
+| -2     | 栈满 / 栈空                     |
+| -3     | 正在切换中（被 switching 拒绝） |
 
 ---
 
@@ -247,23 +264,23 @@ ScrRenewTask (10ms 轮询)
   │ osMessageQueueGet(Key_MessageQueue) → keystr=1
   │ osMessageQueuePut(PageCmd_MessageQueue, cmd=1)
   ▼
-LvHandlerTask (1ms 主循环)
+  LvHandlerTask (1ms 主循环)
   │ osMessageQueueGet(PageCmd_MessageQueue) → cmd=1
-  │ Page_Back()                              ← 在 LVGL 任务中安全执行
+  │ Page_Back(LV_SCR_LOAD_ANIM_MOVE_RIGHT, 250, 0, &ui_Home_Page_screen_init)
   │ lv_task_handler()                        ← LVGL 渲染
 ```
 
 ### 5.3 消息队列定义
 
-| 队列 | 深度 | 生产者 | 消费者 | 用途 |
-|------|------|--------|--------|------|
-| Key_MessageQueue | 1 | KeyTask | ScrRenewTask | 按键值（1=Key1, 2=Key2） |
-| PageCmd_MessageQueue | 2 | ScrRenewTask | LvHandlerTask | 页面命令（1=Back, 2=Back_Home） |
-| IdleBreak_MessageQueue | 1 | KeyTask, LvHandlerTask | PowerMgrTask | 亮屏/重置空闲计时 |
-| Idle_MessageQueue | 1 | IdleTimer | PowerMgrTask | 灭屏 |
-| Stop_MessageQueue | 1 | IdleTimer | PowerMgrTask | 进入 Stop 模式 |
-| HomeUpdata_MessageQueue | 1 | 初始 | SensorTask | 触发主页数据刷新 |
-| DataSave_MessageQueue | 2 | SensorTask | DataSaveTask | 触发 EEPROM 写入 |
+| 队列                    | 深度 | 生产者                 | 消费者        | 用途                            |
+| ----------------------- | ---- | ---------------------- | ------------- | ------------------------------- |
+| Key_MessageQueue        | 1    | KeyTask                | ScrRenewTask  | 按键值（1=Key1, 2=Key2）        |
+| PageCmd_MessageQueue    | 2    | ScrRenewTask           | LvHandlerTask | 页面命令（1=Back, 2=Back_Home） |
+| IdleBreak_MessageQueue  | 1    | KeyTask, LvHandlerTask | PowerMgrTask  | 亮屏/重置空闲计时               |
+| Idle_MessageQueue       | 1    | IdleTimer              | PowerMgrTask  | 灭屏                            |
+| Stop_MessageQueue       | 1    | IdleTimer              | PowerMgrTask  | 进入 Stop 模式                  |
+| HomeUpdata_MessageQueue | 1    | 初始                   | SensorTask    | 触发主页数据刷新                |
+| DataSave_MessageQueue   | 2    | SensorTask             | DataSaveTask  | 触发 EEPROM 写入                |
 
 ---
 
@@ -278,9 +295,11 @@ LvHandlerTask (1ms 主循环)
    └────────┘
    屏幕：HomePage
 
-② 左滑 Page_Load(&Page_Sensor)
+② 左滑 Page_Load(&Page_Sensor, LV_SCR_LOAD_ANIM_MOVE_LEFT, 250, 0, &ui_SensorPage_init)
    deinit Home → 跳过（首页）
    init Sensor → 创建控件 + 定时器
+   lv_scr_load_anim(ui_SensorPage, MOVE_LEFT, 250, 0, false)  // 启动动画
+   300ms 后旧屏幕删除（此处无，首页常驻）
    ┌────────┐
    │ [0] Home│
    │ [1] Sens│ ← top=2
@@ -295,8 +314,10 @@ LvHandlerTask (1ms 主循环)
    └────────┘
    屏幕：HomePage（时间保持最新）
 
-④ 再左滑 Page_Load(&Page_Sensor)
+④ 再左滑 Page_Load(&Page_Sensor, LV_SCR_LOAD_ANIM_MOVE_LEFT, 250, 0, &ui_SensorPage_init)
    init Sensor → 重新创建控件 + 定时器
+   lv_scr_load_anim(ui_SensorPage, MOVE_LEFT, 250, 0, false)  // 启动动画
+   300ms 后 delayed_delete_cb 删除旧 SensorPage 屏幕对象
    ┌────────┐
    │ [0] Home│
    │ [1] Sens│ ← top=2
@@ -416,8 +437,8 @@ void ui_HRPage_deinit(void)
         lv_timer_del(ui_HRPageTimer);
         ui_HRPageTimer = NULL;
     }
-    // 不要调用 lv_obj_del(ui_HRPage)！
-    // 控件由 lv_scr_load 自动删除
+    ui_HRPage = NULL;            // 屏幕指针置 NULL，控件由延迟删除机制释放
+    hr_label = NULL;             // 子控件指针也置 NULL，避免野指针
 }
 ```
 
@@ -430,7 +451,7 @@ void ui_HRPage_deinit(void)
 
 static void btn_hr_click_cb(lv_event_t *e)
 {
-    Page_Load(&Page_HR);
+    Page_Load(&Page_HR, LV_SCR_LOAD_ANIM_MOVE_LEFT, 250, 0, &ui_HRPage_init);
 }
 ```
 
@@ -442,36 +463,37 @@ static void btn_hr_click_cb(lv_event_t *e)
 
 每个新页面需要：
 
-| 内容 | 说明 |
-|------|------|
-| `lv_obj_t *ui_XxxPage` | 页面根对象指针，初始化为 NULL |
-| `Page_t Page_Xxx` | 页面描述符 `{init, deinit, &ui_XxxPage}` |
-| `ui_XxxPage_init()` | 创建所有 LVGL 控件 + 定时器 |
-| `ui_XxxPage_deinit()` | 只删定时器，**不删控件** |
-| `#include "PageManager.h"` | 引入 Page_t 类型 |
+| 内容                         | 说明                                             |
+| ---------------------------- | ------------------------------------------------ |
+| `lv_obj_t *ui_XxxPage`     | 页面根对象指针，初始化为 NULL                    |
+| `Page_t Page_Xxx`          | 页面描述符 `{init, deinit, &ui_XxxPage}`        |
+| `ui_XxxPage_init()`        | 创建所有 LVGL 控件 + 定时器                      |
+| `ui_XxxPage_deinit()`      | 删定时器，**所有指针置 NULL**（不 `lv_obj_del`） |
+| `#include "PageManager.h"` | 引入 Page_t 类型                                 |
 
 ---
 
 ## 8. API 参考
 
-| 函数 | 说明 | 返回值 |
-|------|------|--------|
-| `PageManager_Init(home_page)` | 初始化页面管理器，加载首页 | 0=成功, -1=参数错误 |
-| `Page_Load(new_page)` | 进入新页面（push） | 0=成功, -1=参数错误, -2=栈满, -3=切换中 |
-| `Page_Back()` | 返回上一页（pop） | 0=成功, -1=已在栈底, -3=切换中 |
-| `Page_Back_Home()` | 一键返回首页 | 0=成功, -1=已在首页, -3=切换中 |
-| `Page_Replace(new_page)` | 替换当前页面（不改变栈深度） | 0=成功, -1=参数错误, -2=栈空, -3=切换中 |
-| `Page_Get_NowPage()` | 获取当前页面描述符 | Page_t* 或 NULL |
-| `Page_Get_Depth()` | 获取栈深度 | uint8_t |
-| `Page_Is_Empty()` | 栈是否为空 | bool |
-| `Page_Is_Home()` | 当前是否在首页 | bool |
+| 函数                                                                 | 说明                                 | 返回值                                    |
+| -------------------------------------------------------------------- | ------------------------------------ | ----------------------------------------- |
+| `PageManager_Init(home_page)`                                        | 初始化页面管理器，加载首页           | 0=成功, -1=参数错误                       |
+| `Page_Load(new_page, fademode, spd, delay, target_init)`             | 进入新页面（push），带切换动画       | 0=成功, -1=参数错误, -2=栈满, -3=切换中   |
+| `Page_Back(fademode, spd, delay, target_init)`                       | 返回上一页（pop），带切换动画        | 0=成功, -1=已在栈底, -3=切换中           |
+| `Page_Back_Home()`                                                   | 一键返回首页（无动画）               | 0=成功, -1=已在首页, -3=切换中           |
+| `Page_Replace(new_page)`                                             | 替换当前页面（不改变栈深度，无动画） | 0=成功, -1=参数错误, -2=栈空, -3=切换中  |
+| `Page_Get_NowPage()`                                                 | 获取当前页面描述符                   | Page_t* 或 NULL                           |
+| `Page_Get_Depth()`                                                   | 获取栈深度                           | uint8_t                                   |
+| `Page_Is_Empty()`                                                    | 栈是否为空                           | bool                                      |
+| `Page_Is_Home()`                                                     | 当前是否在首页                       | bool                                      |
 
 ---
 
 ## 9. 关键约束
 
 1. **所有 LVGL 操作必须在 LvHandlerTask 中执行** — 不能在其他任务中直接调用 `Page_Load`/`Page_Back`，必须通过 `PageCmd_MessageQueue` 发消息
-2. **deinit 不要调用 `lv_obj_del`** — 控件由 `lv_scr_load` 自动删除
+2. **deinit 不要调用 `lv_obj_del`，且必须将指针置 NULL** — 屏幕对象由动画结束后的 `delayed_delete_cb` 删除。指针置 NULL 可避免再次进入页面时 `lv_scr_load_anim` 访问已释放对象
 3. **首页是特殊的** — 跳过 deinit/init，控件常驻内存
 4. **快速切换被 switching 拒绝** — 返回 -3 表示操作被忽略
 5. **栈最大深度 8** — 超过会返回 -2
+6. **动画期间旧屏幕对象仍被引用** — 这是 `lv_scr_load_anim` 的内部机制，延迟删除是安全释放的前提

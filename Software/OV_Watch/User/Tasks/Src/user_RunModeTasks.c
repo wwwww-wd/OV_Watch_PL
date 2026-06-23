@@ -13,7 +13,8 @@
 #include "PageManager.h"
 #include "task_wdog.h"
 #include "stm32f4xx_it.h"
-
+#include "../Inc/ui_Brightness_Page.h"
+#include "../Inc/ui_Menu_Page.h"
 /* Private typedef -----------------------------------------------------------*/
 
 /* Private define ------------------------------------------------------------*/
@@ -50,7 +51,7 @@ void PowerMgrTask(void *argument)
     if(osMessageQueueGet(IdleBreak_MessageQueue, &IdleBreakstr, NULL, 1) == osOK)
     {
       IdleTimerCount = 0;
-      LCD_Set_Light(90);
+      LCD_Set_Light(brightness);
     }
 
     // Stop mode entry
@@ -130,7 +131,7 @@ void PowerMgrTask(void *argument)
       HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 2000, RTC_WAKEUPCLOCK_RTCCLK_DIV16);
 
       LCD_Init();
-      LCD_Set_Light(90);
+      LCD_Set_Light(brightness);
       CST816_Wakeup();
 
       if(ChargeCheck())
@@ -175,4 +176,11 @@ void IdleTimerCallback(void *argument)
     IdleTimerCount = 0;
     osMessageQueuePut(Stop_MessageQueue, &Stopstr, 0, 1);
   }
+	if(g_Sleep)
+	{
+		uint8_t Stopstr = 1;
+    IdleTimerCount = 0;
+		g_Sleep = false;
+    osMessageQueuePut(Stop_MessageQueue, &Stopstr, 0, 1);
+	}
 }

@@ -437,9 +437,115 @@ void HW_Ecompass_Sleep(void)
 	#endif
 }
 
+/**************************************************************************/
+/*!
+    @brief  SET the lsm303 E-compass sensor to wakeup mode
+
+    @param	NULL
+
+	@return NULL
+*/
+/**************************************************************************/
+void HW_Ecompass_Wakeup(void)
+{
+	#if HW_USE_LSM303
+		LSM303DLH_Wakeup();
+	#endif
+}
+
+/**************************************************************************/
+/*!
+    @brief  read accelerometer data from lsm303
+
+    @param	Xa, Ya, Za
+
+	@return NULL
+*/
+/**************************************************************************/
+void HW_Ecompass_ReadAccel(int16_t *Xa, int16_t *Ya, int16_t *Za)
+{
+	#if HW_USE_LSM303
+		LSM303_ReadAcceleration(Xa, Ya, Za);
+	#else
+		*Xa = 0; *Ya = 0; *Za = 0;
+	#endif
+}
+
+/**************************************************************************/
+/*!
+    @brief  read magnetic data from lsm303
+
+    @param	Xm, Ym, Zm
+
+	@return NULL
+*/
+/**************************************************************************/
+void HW_Ecompass_ReadMag(int16_t *Xm, int16_t *Ym, int16_t *Zm)
+{
+	#if HW_USE_LSM303
+		LSM303_ReadMagnetic(Xm, Ym, Zm);
+	#else
+		*Xm = 0; *Ym = 0; *Zm = 0;
+	#endif
+}
+
+/**************************************************************************/
+/*!
+    @brief  calculate azimuth from accel and mag data
+
+    @param	Xa, Ya, Za, Xm, Ym, Zm
+
+	@return azimuth angle
+*/
+/**************************************************************************/
+float HW_Ecompass_CalcAzimuth(int16_t Xa, int16_t Ya, int16_t Za, int16_t Xm, int16_t Ym, int16_t Zm)
+{
+	#if HW_USE_LSM303
+		return Azimuth_Calculate(Xa, Ya, Za, Xm, Ym, Zm);
+	#else
+		return 0.0f;
+	#endif
+}
+
 /***************************
  *  heart rate meter Fucntions - em7028
  ***************************/
+
+/**************************************************************************/
+/*!
+    @brief  enable the EM7028 heart rate sensor
+
+    @param	NULL
+
+	@return 0 if successful
+*/
+/**************************************************************************/
+uint8_t HW_HRmeter_Enable(void)
+{
+	#if HW_USE_EM7028
+		return EM7028_hrs_Enable();
+	#endif
+	return 0;
+}
+
+/**************************************************************************/
+/*!
+    @brief  read raw HRS data from EM7028
+
+    @param	NULL
+
+	@return raw HRS value
+*/
+/**************************************************************************/
+uint16_t HW_HRmeter_ReadRaw(void)
+{
+	#if HW_USE_EM7028
+		return EM7028_Get_HRS1();
+	#endif
+	return 0;
+}
+
+
 
 /**************************************************************************/
 /*!
@@ -533,14 +639,20 @@ HW_InterfaceTypeDef HWInterface = {
 		.ConnectionError = 1,
 		.direction = 45,
 		.Init = HW_Ecompass_Init,
-		.Sleep = HW_Ecompass_Sleep
+		.Sleep = HW_Ecompass_Sleep,
+		.Wakeup = HW_Ecompass_Wakeup,
+		.ReadAccel = HW_Ecompass_ReadAccel,
+		.ReadMag = HW_Ecompass_ReadMag,
+		.CalcAzimuth = HW_Ecompass_CalcAzimuth
 	},
 	.HR_meter = {
 		.ConnectionError = 1,
 		.HrRate = 0,
 		.SPO2 = 99,
 		.Init = HW_HRmeter_Init,
-		.Sleep = HW_HRmeter_Sleep
+		.Sleep = HW_HRmeter_Sleep,
+		.Enable = HW_HRmeter_Enable,
+		.ReadRaw = HW_HRmeter_ReadRaw
 	}
 };
 

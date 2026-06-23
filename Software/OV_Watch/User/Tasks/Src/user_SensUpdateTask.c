@@ -4,7 +4,6 @@
 #include "main.h"
 #include "HWDataAccess.h"
 #include "PageManager.h"
-#include "ui_HomePage.h"
 #include "task_wdog.h"
 
 /* Private typedef -----------------------------------------------------------*/

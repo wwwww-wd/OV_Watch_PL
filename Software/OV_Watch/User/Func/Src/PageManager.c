@@ -48,17 +48,44 @@ static Page_t *stack_peek(void)
 }
 
 /**
- *  @brief  清理旧页面定时器，加载新页面
- *  @note   先 deinit 旧页（删定时器），再 init 新页并加载屏幕
- *          lv_scr_load 会自动删除旧屏幕对象
+ *  @brief  动画结束后删除旧屏幕的回调
  */
-static void switch_to(Page_t *old_page, Page_t *new_page)
+static void delayed_delete_cb(lv_timer_t *t)
 {
+    lv_obj_t *old_scr = (lv_obj_t *)(t->user_data);
+    if(old_scr) {
+        lv_obj_del(old_scr);
+    }
+    lv_timer_del(t);
+}
+
+/**
+ *  @brief  清理旧页面定时器，加载新页面
+ *  @note   先保存旧屏幕指针，再 deinit 旧页（删定时器），然后 init 新页并加载屏幕
+ *          动画结束后由 delayed_delete_cb 删除旧屏幕对象
+ */
+static void switch_to(Page_t *old_page, Page_t *new_page, lv_scr_load_anim_t fademode, int spd, int delay)
+{
+    // 先保存旧屏幕指针（deinit 会把 *page_obj 置 NULL）
+    lv_obj_t *old_scr = (old_page != NULL && old_page != stack.home_page)
+                        ? *old_page->page_obj : NULL;
+
     if (old_page != NULL && old_page != stack.home_page)
         old_page->deinit();
     if (new_page != stack.home_page)
         new_page->init();
-    lv_scr_load(*new_page->page_obj);
+
+    lv_scr_load_anim(*new_page->page_obj, fademode, spd, delay, false);
+
+    // 启动一次性定时器，等动画结束后再删除旧屏幕
+    if (old_scr != NULL) {
+        lv_timer_t *del_timer = lv_timer_create(
+            delayed_delete_cb,
+            spd + delay + 50,      // 动画时间 + 保险余量
+            old_scr                // 直接传入旧屏幕对象指针
+        );
+        lv_timer_set_repeat_count(del_timer, 1);
+    }
 }
 
 /**
@@ -127,7 +154,7 @@ bool Page_Is_Home(void)
  *  @retval -1  参数错误
  *  @retval -2  栈满
  */
-int8_t Page_Load(Page_t *new_page)
+int8_t Page_Load(Page_t *new_page, lv_scr_load_anim_t fademode, int spd, int delay)
 {
     if (new_page == NULL || new_page->page_obj == NULL)
         return -1;
@@ -146,7 +173,7 @@ int8_t Page_Load(Page_t *new_page)
 
     Page_t *current = stack_peek();
     stack_push(new_page);
-    switch_to(current, new_page);
+    switch_to(current, new_page, fademode, spd, delay);
 
     osMutexRelease(stack_mutex);
     switching = false;
@@ -159,7 +186,7 @@ int8_t Page_Load(Page_t *new_page)
  *  @retval  0  成功
  *  @retval -1  已在栈底，无法继续返回
  */
-int8_t Page_Back(void)
+int8_t Page_Back(lv_scr_load_anim_t fademode, int spd, int delay)
 {
     if (switching)
         return -3;
@@ -176,7 +203,7 @@ int8_t Page_Back(void)
 
     Page_t *current = stack_pop();
     Page_t *previous = stack_peek();
-    switch_to(current, previous);
+    switch_to(current, previous, fademode, spd, delay);
 
     osMutexRelease(stack_mutex);
     switching = false;
@@ -211,7 +238,7 @@ int8_t Page_Back_Home(void)
         current = stack_peek();
     }
 
-    switch_to(NULL, current);
+    switch_to(NULL, current, LV_SCR_LOAD_ANIM_NONE, 0, 0);
 
     osMutexRelease(stack_mutex);
     switching = false;
@@ -245,7 +272,7 @@ int8_t Page_Replace(Page_t *new_page)
 
     Page_t *current = stack_pop();
     stack_push(new_page);
-    switch_to(current, new_page);
+    switch_to(current, new_page, LV_SCR_LOAD_ANIM_NONE, 0, 0);
 
     osMutexRelease(stack_mutex);
     switching = false;

@@ -35,14 +35,14 @@ extern "C" {
 
 #if HW_USE_HARDWARE
   #define HW_USE_RTC    1
-  #define HW_USE_BLE    0
+  #define HW_USE_BLE    1
   #define HW_USE_BAT    1
   #define HW_USE_LCD    1
   #define HW_USE_IMU    1
   #define HW_USE_AHT21  1
   #define HW_USE_SPL06  1
   #define HW_USE_LSM303 1
-  #define HW_USE_EM7028 0
+  #define HW_USE_EM7028 1
 #endif
 
 /***************************
@@ -225,6 +225,10 @@ typedef struct
   uint16_t direction;
   uint8_t (*Init)(void);
   void (*Sleep)(void);
+  void (*Wakeup)(void);
+  void (*ReadAccel)(int16_t *Xa, int16_t *Ya, int16_t *Za);
+  void (*ReadMag)(int16_t *Xm, int16_t *Ym, int16_t *Zm);
+  float (*CalcAzimuth)(int16_t Xa, int16_t Ya, int16_t Za, int16_t Xm, int16_t Ym, int16_t Zm);
 
 } HW_Ecompass_InterfaceTypeDef;
 
@@ -238,6 +242,8 @@ typedef struct
   uint8_t SPO2;
   uint8_t (*Init)(void);
   void (*Sleep)(void);
+  uint8_t (*Enable)(void);
+  uint16_t (*ReadRaw)(void);
 
 } HW_HRmeter_InterfaceTypeDef;
 
