@@ -66,7 +66,7 @@ void EXTI9_5_IRQHandler(void);
 extern uint8_t HardInt_Charg_flag;
 extern uint8_t HardInt_receive_str[25];
 extern uint8_t HardInt_uart_flag;
-
+extern uint8_t HardInt_mpu_flag;
 /* USER CODE END EFP */
 
 #ifdef __cplusplus
